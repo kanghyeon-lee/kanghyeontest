@@ -50,3 +50,35 @@ jobs:
           name: html-report
           path: report.html
           retention-days: 14
+
+      - name: Prepare Pages site
+        if: success()
+        run: |
+          mkdir -p site
+          cp report.html site/index.html
+
+      - name: Upload Pages artifact
+        if: success()
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/
+
+  deploy-report:
+    # test job이 성공했을 때만 실행됨 (needs 기본 동작) + main 브랜치에서만 배포
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    # Pages 배포가 동시에 겹치지 않도록 직렬화
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
