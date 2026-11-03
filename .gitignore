@@ -6,3 +6,4 @@ report.html
 .idea/
 .env
 .pytest_cache/
+api-report.html

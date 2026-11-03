@@ -30,7 +30,7 @@ jobs:
 
       - name: Run tests
         run: >
-          pytest
+          pytest -m web
           --screenshot only-on-failure
           --tracing retain-on-failure
           --html=report.html --self-contained-html
@@ -63,9 +63,38 @@ jobs:
         with:
           path: site/
 
+  api-test:
+    # 웹 테스트(test job)와 병렬로 실행되는 restful-booker API 테스트
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.9"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run API tests
+        run: pytest -m api -v --html=api-report.html --self-contained-html
+
+      - name: Upload API report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-report
+          path: api-report.html
+          retention-days: 14
+
   deploy-report:
-    # test job이 성공했을 때만 실행됨 (needs 기본 동작) + main 브랜치에서만 배포
-    needs: test
+    # 웹 테스트(test)와 API 테스트(api-test)가 모두 성공했을 때만 실행됨 (needs 기본 동작) + main 브랜치에서만 배포
+    needs: [test, api-test]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
